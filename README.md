@@ -68,8 +68,9 @@ You are welcomed to open an issue, PR or discussion. Otherwise you can just hit 
 
 ## Funding, sponsorship and donations
 
-You can also contribute with Pixel-AGI and my future projects by funding me and buying me a cofffeee!
-[<center><img src="coffee.jpg" style="width: 128px; height: 128px;"></center>](https://buy.stripe.com/dR62aUaaQ7S4cKs3cc)
+You can also contribute with Pixel-AGI and my future projects by funding me and buying me a cofffeee! Just click on the image below:
+
+[<p align="center"><img src="coffee.jpg" style="width: 128px; height: 128px;"></p>](https://buy.stripe.com/dR62aUaaQ7S4cKs3cc)
 
 
 ## License

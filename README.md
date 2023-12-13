@@ -6,6 +6,11 @@ Pixel-AGI is a project aimed at leveraging the capabilities of large language mo
 
 This project is driven by a fascination with language engines and the potential they hold. The idea of planning and reasoning solely using language is a compelling one, and this project aims to explore this concept to its fullest extent on the image space. I'd rather edit each dataset entry manually to add actual reasoning and let the model clone my thoughts than just let the model hallucinate a beautiful answer. 
 
+## Demo. What it does
+
+https://github.com/oliveirabruno01/pixel-agi/assets/47301081/38ff62d3-c228-4687-9761-7447c08860f2
+
+
 ## Getting Started
 
 To get started with Pixel-AGI, follow these steps:
@@ -13,15 +18,11 @@ To get started with Pixel-AGI, follow these steps:
 1. Clone the repository to your local machine.
 2. Install the necessary packages using pip:
 
-``
-pip install -r requirements.txt
-``
+   ``pip install -r requirements.txt``
 
 4. Run the application:
    
-``
-python3 app.py
-``
+   ``python3 app.py``
 
 Alternatively, you can use an IDE like PyCharm to run the application.
 
@@ -44,9 +45,9 @@ The app is currently in development. The major tasks that need to be completed a
 1. Implement stream completion and real-time parsing of the assistant's answers.
 2. Expand the UI to support tasks other than recoloring. 
 3. Add utilities to help increment our datasets.
-4?. Add access to the GPT-4 Vision/LlaVA model to leverage its computer vision capabilities.
+4. Add access to the GPT-4 Vision/LlaVA model to leverage its computer vision capabilities?
 
-Some minor tasks include updating the README with a showcase of the app, and add some explanations in-code (how I managed to implemented the autocomplete, for instance). These minor tasks will wait until I wake up from my post-48h-days-grinding-beauty-sleep :D
+Some minor tasks include updating the README with a showcase of the app, and add some explanations in-code (how I managed to implemented the autocomplete, for instance). These minor tasks will wait until I wake up from my post-48h--grinding-beauty-sleep :D
 
 Once these tasks are completed, the focus will shift to building a massive dataset ̶t̶h̶a̶t̶ ̶b̶u̶i̶l̶d̶s̶ ̶i̶t̶s̶e̶l̶f̶  and conducting several training runs.
 

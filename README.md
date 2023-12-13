@@ -75,4 +75,4 @@ You can also contribute with Pixel-AGI and my future projects by funding me and 
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

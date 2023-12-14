@@ -23,6 +23,10 @@ You are Pix, a large language model AI, trained with a vast corpus of pixel-art 
 
 load_dotenv()
 
+openai_api_key = os.environ.get("API_KEY")
+openai_base_url = os.environ.get("BASE_URL")
+openai_base_model = os.environ.get("BASE_MODEL")
+
 encoding = tiktoken.get_encoding("cl100k_base")
 tokenizer = tokenizers.Tokenizer.from_pretrained("TheBloke/Llama-2-70b-fp16")
 
@@ -139,13 +143,13 @@ palette_recolor_response = gr.HTML(
 generated_image = gr.Image(visible=False, elem_id="image_upload", type='pil', image_mode='RGBA')
 
 
-def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, stream, api_input, base_url, base_model):
+def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, stream, api_input, base_url_input, base_model):
     global loaded_files
 
     # Initialize OpenAI client
     client = OpenAI(
-        api_key=api_input,
-        base_url=base_url if base_url else 'https://api.openai.com/v1'
+        api_key=api_input or openai_api_key,
+        base_url=base_url_input or openai_base_url
     )
 
     @retry(wait=wait_random_exponential(min=1, max=60), stop=stop_after_attempt(6))
@@ -201,7 +205,7 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
 
     # if stream:
     #     cot_stream = completion_with_backoff(
-    #         model=base_model,
+    #         model=base_model or openai_base_model,
     #         temperature=temperature,
     #         messages=cot_messages,
     #         stream=True
@@ -218,7 +222,7 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
     #             yield answer, ""
     # else:
     cot_completion = completion_with_backoff(
-        model=base_model,
+        model=base_model or openai_base_model,
         temperature=temperature,
         messages=cot_messages,
     )
@@ -264,8 +268,8 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
 
 
 api_input = gr.Textbox(label="Your OpenAI API key", type="password")
-base_url = gr.Textbox(label="OpenAI API base URL", value="https://openai-proxy.replicate.com/v1")
-base_model = gr.Textbox(label="Model", value="meta/llama-2-70b-chat")
+base_url = gr.Textbox(label="OpenAI API base URL")
+base_model = gr.Textbox(label="Model")
 
 with gr.Blocks() as demo:
     with gr.Tab("app"):

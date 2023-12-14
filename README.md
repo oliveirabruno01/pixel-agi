@@ -26,7 +26,8 @@ To get started with Pixel-AGI, follow these steps:
 
 Alternatively, you can use an IDE like PyCharm to run the application.
 
-Once the application is open, navigate to the settings tab to add your OpenAI API key and select the model you wish to use.
+Once the application is open, navigate to the settings tab to add your OpenAI API key and select the model you wish to use. You can also copy the ``.env.example`` as ``.env`` and set up the params to fallback if the webui settings are empty.
+
 
 ## Project Structure
 

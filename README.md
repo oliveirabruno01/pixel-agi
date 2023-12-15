@@ -44,13 +44,11 @@ Currently we are using `skills/train.jsonl` just for random RAG in our gradio ap
 The app is currently in development. The major tasks that need to be completed are:
 
 1. Implement stream completion and real-time parsing of the assistant's answers.
-2. Expand the UI to support tasks other than recoloring. 
-3. Add utilities to help increment our datasets.
-4. Add access to the GPT-4 Vision/LlaVA model to leverage its computer vision capabilities?
+2. Add utilities to help increment our datasets such as up-voting to add the interaction to the dataset and even RLHF curation.
+3. Add access to the GPT-4 Vision/LlaVA model to leverage its computer vision capabilities?
 
-Some minor tasks include updating the README with a showcase of the app, and add some explanations in-code (how I managed to implemented the autocomplete, for instance). These minor tasks will wait until I wake up from my post-48h--grinding-beauty-sleep :D
 
-Once these tasks are completed, the focus will shift to building a massive dataset ̶t̶h̶a̶t̶ ̶b̶u̶i̶l̶d̶s̶ ̶i̶t̶s̶e̶l̶f̶  and conducting several training runs.
+Once these tasks are completed, the focus will shift to building a massive dataset  ̶t̶h̶a̶t̶ ̶b̶u̶i̶l̶d̶s̶ ̶i̶t̶s̶e̶l̶f̶  and conducting several training runs.
 
 ## Future Work
 

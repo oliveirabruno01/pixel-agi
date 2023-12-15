@@ -140,10 +140,11 @@ def load_images(files):
 
 palette_recolor_response = gr.HTML(
     value='<span style="color: #708090;">██ The new image and palette will render here</span>')
-generated_image = gr.Image(visible=False, elem_id="image_upload", type='pil', image_mode='RGBA')
+generated_image = gr.Gallery(visible=False, elem_id="image_upload")
 
 
-def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, stream, api_input, base_url_input, base_model):
+def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, stream, api_input, base_url_input,
+                base_model):
     global loaded_files
 
     # Initialize OpenAI client
@@ -225,44 +226,63 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
         model=base_model or openai_base_model,
         temperature=temperature,
         messages=cot_messages,
+        max_tokens=5000
     )
 
     answer = cot_completion.choices[0].message.content
 
+    print(answer)
+
     # If the task type is 'recolor', extract the palette from the answer
     if task_type == 'recolor':
-        # Find the start and end indices of the palette in the answer
-        palette_start = answer.index("```csv\n") + len("```csv\n")
-        palette_end = answer.index("```", palette_start)
-        # Extract the palette from the answer
-        raw_palette = answer[palette_start:palette_end]
+        # Initialize html_palette as an empty string
+        html_palette = ''
+        # Initialize a list to store the images
+        images = []
 
-        # Split the raw palette into lines
-        palette_lines = raw_palette.strip().split('\n')
-        # Extract the colors from the palette
-        colors = [line.split(',')[1] for line in palette_lines[1:]]
+        # Split the answer into parts by "palette.csv"
+        parts = answer.split("palette.csv")
+        for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
+            # Add the "palette.csv" header back to the part
+            part = "palette.csv" + part
+            print('PARTI')
+            print(part)
+            # Find the start and end indices of the palette in the part
+            palette_start = part.index("```csv") + len("```csv")
+            palette_end = part.index("```\n", palette_start)
+            # Extract the palette from the part
+            raw_palette = part[palette_start:palette_end]
 
-        # Generate the HTML string of colored full blocks
-        html_palette = f'<h2>Generated palette</h2>' + ''.join(
-            f'<span style="color: {color};">██&#xfe0e;</span>' for color in colors)
-        image_data = image_obj['image_data'].split('\n')
+            # Split the raw palette into lines
+            palette_lines = raw_palette.strip().split('\n')
+            # Extract the colors from the palette
+            colors = [line.split(',')[1] for line in palette_lines[1:]]
 
-        # Create a dictionary mapping keys to colors
-        palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
+            # Generate the HTML string of colored full blocks
+            html_palette = f'<h2>Generated palette</h2>' + ''.join(
+                f'<span style="color: {color};">██&#xfe0e;</span>' for color in colors)
 
-        # Create an empty numpy array for the image
-        image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
-        image_a = None
+            # Create a dictionary mapping keys to colors
+            palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
+            image_data = image_obj['image_data'].split('\n')
 
-        # Fill in the image array with the appropriate colors
-        for i, row in enumerate(image_data):
-            for j, pixel in enumerate(row.strip().split(',')):
-                if pixel:
-                    image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+            # Create an empty numpy array for the image
+            image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
 
-        # Convert the numpy array to a PIL Image
-        image_a = Image.fromarray(image).resize((512, 512), Image.NEAREST)
-        return answer, html_palette, gr.update(visible=True), image_a, gr.update(visible=True)
+            # Fill in the image array with the appropriate colors
+            for i, row in enumerate(image_data):
+                for j, pixel in enumerate(row.strip().split(',')):
+                    if pixel:
+                        image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+
+            # Convert the numpy array to a PIL Image
+            image_a = Image.fromarray(image)
+            image_b = image_a.resize((512, 512), Image.NEAREST)
+            # Add the image to the list of images
+            images.append(image_a)
+            images.append(image_b)
+
+        return answer, html_palette, gr.update(visible=True), images, gr.update(visible=True)
 
     return answer, '', None, None, None
 

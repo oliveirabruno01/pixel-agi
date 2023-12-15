@@ -204,24 +204,6 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
     cot_messages = [base_system_prompt, *in_context_learning, *context]
     print(cot_messages)
 
-    # if stream:
-    #     cot_stream = completion_with_backoff(
-    #         model=base_model or openai_base_model,
-    #         temperature=temperature,
-    #         messages=cot_messages,
-    #         stream=True
-    #     )
-    #
-    #     answer = ''
-    #
-    #     for chunk in cot_stream:
-    #         if chunk.choices[0].delta is not None:
-    #             if type(chunk.choices[0].delta) != str:
-    #                 answer += str(chunk.choices[0].delta.content)
-    #             else:
-    #                 answer += str(chunk.choices[0].delta)
-    #             yield answer, ""
-    # else:
     cot_completion = completion_with_backoff(
         model=base_model or openai_base_model,
         temperature=temperature,
@@ -283,6 +265,55 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
             images.append(image_b)
 
         return answer, html_palette, gr.update(visible=True), images, gr.update(visible=True)
+
+    # If the task type is 'creation', extract the palette and image data from the answer
+    elif task_type == 'creation':
+        # Initialize a list to store the images
+        images = []
+
+        # Split the answer into parts by "palette.csv"
+        parts = answer.split("palette.csv")
+        for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
+            # Add the "palette.csv" header back to the part
+            part = "palette.csv" + part
+
+            # Find the start and end indices of the palette in the part
+            palette_start = part.index("```csv") + len("```csv")
+            palette_end = part.index("```\n", palette_start)
+            # Extract the palette from the part
+            raw_palette = part[palette_start:palette_end]
+
+            # Split the raw palette into lines
+            palette_lines = raw_palette.strip().split('\n')
+            # Create a dictionary mapping keys to colors
+            palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
+
+            # Find the start and end indices of the image data in the part
+            image_data_start = part.index("image_data.csv\n```csv\n") + len("image_data.csv\n```csv\n")
+            image_data_end = part.index("```\n", image_data_start)
+            # Extract the image data from the part
+            raw_image_data = part[image_data_start:image_data_end]
+
+            # Split the raw image data into lines
+            image_data = raw_image_data.strip().split('\n')
+
+            # Create an empty numpy array for the image
+            image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
+
+            # Fill in the image array with the appropriate colors
+            for i, row in enumerate(image_data):
+                for j, pixel in enumerate(row.strip().split(',')):
+                    if pixel:
+                        image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+
+            # Convert the numpy array to a PIL Image
+            image_a = Image.fromarray(image)
+            image_b = image_a.resize((512, 512), Image.NEAREST)
+            # Add the image to the list of images
+            images.append(image_a)
+            images.append(image_b)
+
+        return answer, '', None, images, gr.update(visible=True)
 
     return answer, '', None, None, None
 

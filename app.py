@@ -212,7 +212,6 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
     )
 
     answer = cot_completion.choices[0].message.content
-
     print(answer)
 
     # If the task type is 'recolor', extract the palette from the answer
@@ -231,7 +230,7 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
             print(part)
             # Find the start and end indices of the palette in the part
             palette_start = part.index("```csv") + len("```csv")
-            palette_end = part.index("```\n", palette_start)
+            palette_end = part.index("```", palette_start)
             # Extract the palette from the part
             raw_palette = part[palette_start:palette_end]
 
@@ -279,7 +278,7 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
 
             # Find the start and end indices of the palette in the part
             palette_start = part.index("```csv") + len("```csv")
-            palette_end = part.index("```\n", palette_start)
+            palette_end = part.index("```", palette_start)
             # Extract the palette from the part
             raw_palette = part[palette_start:palette_end]
 
@@ -291,6 +290,102 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
             # Find the start and end indices of the image data in the part
             image_data_start = part.index("image_data.csv\n```csv\n") + len("image_data.csv\n```csv\n")
             image_data_end = part.index("```\n", image_data_start)
+            # Extract the image data from the part
+            raw_image_data = part[image_data_start:image_data_end]
+
+            # Split the raw image data into lines
+            image_data = raw_image_data.strip().split('\n')
+
+            # Create an empty numpy array for the image
+            image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
+
+            # Fill in the image array with the appropriate colors
+            for i, row in enumerate(image_data):
+                for j, pixel in enumerate(row.strip().split(',')):
+                    if pixel:
+                        image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+
+            # Convert the numpy array to a PIL Image
+            image_a = Image.fromarray(image)
+            image_b = image_a.resize((512, 512), Image.NEAREST)
+            # Add the image to the list of images
+            images.append(image_a)
+            images.append(image_b)
+
+        return answer, '', None, images, gr.update(visible=True)
+
+    # If the task type is 'segmentation', extract the palette and image data from the answer
+    elif task_type == 'segmentation':
+        # Initialize a list to store the images
+        images = []
+
+        # Split the answer into parts by "palette.csv"
+        parts = answer.split("palette.csv")
+        for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
+            # Add the "palette.csv" header back to the part
+            part = "palette.csv" + part
+
+            # Check if "```csv" is in the part
+            if "```csv" in part:
+                # Find the start and end indices of the palette in the part
+                palette_start = part.index("```csv") + len("```csv")
+                palette_end = part.index("```\n", palette_start)
+                # Extract the palette from the part
+                raw_palette = part[palette_start:palette_end]
+
+                # Split the raw palette into lines
+                palette_lines = raw_palette.strip().split('\n')
+                # Create a dictionary mapping keys to colors
+                palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
+
+                # Find the start and end indices of the image data in the part
+                image_data_start = part.index("image_data.csv\n```csv\n") + len("image_data.csv\n```csv\n")
+                image_data_end = part.index("```", image_data_start)
+                # Extract the image data from the part
+                raw_image_data = part[image_data_start:image_data_end]
+
+                # Split the raw image data into lines
+                image_data = raw_image_data.strip().split('\n')
+
+                # Create an empty numpy array for the image
+                image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
+
+                # Fill in the image array with the appropriate colors
+                for i, row in enumerate(image_data):
+                    for j, pixel in enumerate(row.strip().split(',')):
+                        if pixel:
+                            image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+
+                # Convert the numpy array to a PIL Image
+                image_a = Image.fromarray(image)
+                image_b = image_a.resize((512, 512), Image.NEAREST)
+                # Add the image to the list of images
+                images.append(image_a)
+                images.append(image_b)
+            else:
+                continue  # Skip to the next part
+
+        return answer, '', None, images, gr.update(visible=True)
+
+    # If the task type is 'inpainting', extract the image data from the answer
+    elif task_type == 'inpainting':
+        # Initialize a list to store the images
+        images = []
+
+        # Extract the palette from the user's input
+        raw_palette = image_obj['palette'].split('\n')
+        palette = {key: color for key, color in (line.split(',') for line in raw_palette[1:])}  # Skip the header
+
+        # Split the answer into parts by "image_data.csv"
+        parts = answer.split("image_data.csv")
+        print(parts)
+        for part in parts[1:]:  # Skip the first part, as it doesn't contain image data
+            # Add the "image_data.csv" header back to the part
+            part = "image_data.csv" + part
+
+            # Find the start and end indices of the image data in the part
+            image_data_start = part.index("```csv") + len("```csv")
+            image_data_end = part.index("```", image_data_start)
             # Extract the image data from the part
             raw_image_data = part[image_data_start:image_data_end]
 

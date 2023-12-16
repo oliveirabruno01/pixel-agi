@@ -30,6 +30,18 @@ openai_base_model = os.environ.get("BASE_MODEL")
 encoding = tiktoken.get_encoding("cl100k_base")
 tokenizer = tokenizers.Tokenizer.from_pretrained("TheBloke/Llama-2-70b-fp16")
 
+loaded_prompts = {}
+
+
+def load_prompts(prompts):
+    for prompt in prompts:
+        with open(f'./prompts/{prompt}') as file:
+            loaded_prompts[prompt] = file.read()
+
+
+prompts = ['healer/recolor_system.md', 'healer/recolor_test_input.md', 'healer/recolor_test_output.md']
+load_prompts(prompts)
+
 
 def load_jsonl(file_path):
     data = []
@@ -143,6 +155,202 @@ palette_recolor_response = gr.HTML(
 generated_image = gr.Gallery(visible=False, elem_id="image_upload")
 
 
+def handle_recolor_answer(answer, image_obj):
+    # Initialize html_palette as an empty string
+    html_palette = ''
+    # Initialize a list to store the images
+    images = []
+
+    # Split the answer into parts by "palette.csv"
+    parts = answer.split("palette.csv\n")
+    for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
+        # Add the "palette.csv" header back to the part
+        part = "palette.csv\n" + part
+        print('PARTI')
+        print(part)
+        # Find the start and end indices of the palette in the part
+        palette_start = part.index("```csv") + len("```csv")
+        palette_end = part.index("```", palette_start)
+        # Extract the palette from the part
+        raw_palette = part[palette_start:palette_end]
+
+        # Split the raw palette into lines
+        palette_lines = raw_palette.strip().split('\n')
+        # Extract the colors from the palette
+        colors = [line.split(',')[1] for line in palette_lines[1:]]
+
+        # Generate the HTML string of colored full blocks
+        html_palette = f'<h2>Generated palette</h2>' + ''.join(
+            f'<span style="color: {color};">██&#xfe0e;</span>' for color in colors)
+
+        # Create a dictionary mapping keys to colors
+        palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
+        image_data = image_obj['image_data'].split('\n')
+
+        # Create an empty numpy array for the image
+        image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
+
+        # Fill in the image array with the appropriate colors
+        for i, row in enumerate(image_data):
+            for j, pixel in enumerate(row.strip().split(',')):
+                if pixel:
+                    image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+
+        # Convert the numpy array to a PIL Image
+        image_a = Image.fromarray(image)
+        image_b = image_a.resize((512, 512), Image.NEAREST)
+        # Add the image to the list of images
+        images.append(image_a)
+        images.append(image_b)
+
+    return answer, html_palette, gr.update(visible=True), images, gr.update(visible=True)
+
+
+def handle_creation_answer(answer, image_obj):
+    # Initialize a list to store the images
+    images = []
+
+    # Split the answer into parts by "palette.csv"
+    parts = answer.split("palette.csv\n")
+    for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
+        # Add the "palette.csv" header back to the part
+        part = "palette.csv\n" + part
+
+        # Find the start and end indices of the palette in the part
+        palette_start = part.index("```csv") + len("```csv")
+        palette_end = part.index("```", palette_start)
+        # Extract the palette from the part
+        raw_palette = part[palette_start:palette_end]
+
+        # Split the raw palette into lines
+        palette_lines = raw_palette.strip().split('\n')
+        # Create a dictionary mapping keys to colors
+        palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
+
+        # Find the start and end indices of the image data in the part
+        image_data_start = part.index("image_data.csv\n```csv\n") + len("image_data.csv\n```csv\n")
+        image_data_end = part.index("```\n", image_data_start)
+        # Extract the image data from the part
+        raw_image_data = part[image_data_start:image_data_end]
+
+        # Split the raw image data into lines
+        image_data = raw_image_data.strip().split('\n')
+
+        # Create an empty numpy array for the image
+        image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
+
+        # Fill in the image array with the appropriate colors
+        for i, row in enumerate(image_data):
+            for j, pixel in enumerate(row.strip().split(',')):
+                if pixel:
+                    image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+
+        # Convert the numpy array to a PIL Image
+        image_a = Image.fromarray(image)
+        image_b = image_a.resize((512, 512), Image.NEAREST)
+        # Add the image to the list of images
+        images.append(image_a)
+        images.append(image_b)
+
+    return answer, '', None, images, gr.update(visible=True)
+
+
+def handle_segmentation_answer(answer, image_obj):
+    # Initialize a list to store the images
+    images = []
+
+    # Split the answer into parts by "palette.csv"
+    parts = answer.split("palette.csv\n")
+    for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
+        # Add the "palette.csv" header back to the part
+        part = "palette.csv\n" + part
+
+        # Check if "```csv" is in the part
+        if "```csv" in part:
+            # Find the start and end indices of the palette in the part
+            palette_start = part.index("```csv") + len("```csv")
+            palette_end = part.index("```\n", palette_start)
+            # Extract the palette from the part
+            raw_palette = part[palette_start:palette_end]
+
+            # Split the raw palette into lines
+            palette_lines = raw_palette.strip().split('\n')
+            # Create a dictionary mapping keys to colors
+            palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
+
+            # Find the start and end indices of the image data in the part
+            image_data_start = part.index("image_data.csv\n```csv\n") + len("image_data.csv\n```csv\n")
+            image_data_end = part.index("```", image_data_start)
+            # Extract the image data from the part
+            raw_image_data = part[image_data_start:image_data_end]
+
+            # Split the raw image data into lines
+            image_data = raw_image_data.strip().split('\n')
+
+            # Create an empty numpy array for the image
+            image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
+
+            # Fill in the image array with the appropriate colors
+            for i, row in enumerate(image_data):
+                for j, pixel in enumerate(row.strip().split(',')):
+                    if pixel:
+                        image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+
+            # Convert the numpy array to a PIL Image
+            image_a = Image.fromarray(image)
+            image_b = image_a.resize((512, 512), Image.NEAREST)
+            # Add the image to the list of images
+            images.append(image_a)
+            images.append(image_b)
+        else:
+            continue  # Skip to the next part
+
+    return answer, '', None, images, gr.update(visible=True)
+
+
+def handle_inpainting_answer(answer, image_obj):
+    # Initialize a list to store the images
+    images = []
+
+    # Extract the palette from the user's input
+    raw_palette = image_obj['palette'].split('\n')
+    palette = {key: color for key, color in (line.split(',') for line in raw_palette[1:])}  # Skip the header
+
+    # Split the answer into parts by "image_data.csv"
+    parts = answer.split("image_data.csv")
+    print(parts)
+    for part in parts[1:]:  # Skip the first part, as it doesn't contain image data
+        # Add the "image_data.csv" header back to the part
+        part = "image_data.csv" + part
+
+        # Find the start and end indices of the image data in the part
+        image_data_start = part.index("```csv") + len("```csv")
+        image_data_end = part.index("```", image_data_start)
+        # Extract the image data from the part
+        raw_image_data = part[image_data_start:image_data_end]
+
+        # Split the raw image data into lines
+        image_data = raw_image_data.strip().split('\n')
+
+        # Create an empty numpy array for the image
+        image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
+
+        # Fill in the image array with the appropriate colors
+        for i, row in enumerate(image_data):
+            for j, pixel in enumerate(row.strip().split(',')):
+                if pixel:
+                    image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+
+        # Convert the numpy array to a PIL Image
+        image_a = Image.fromarray(image)
+        image_b = image_a.resize((512, 512), Image.NEAREST)
+        # Add the image to the list of images
+        images.append(image_a)
+        images.append(image_b)
+
+    return answer, '', None, images, gr.update(visible=True)
+
+
 def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, stream, api_input, base_url_input,
                 base_model):
     global loaded_files
@@ -214,202 +422,70 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
     answer = cot_completion.choices[0].message.content
     print(answer)
 
-    # If the task type is 'recolor', extract the palette from the answer
-    if task_type == 'recolor':
-        # Initialize html_palette as an empty string
-        html_palette = ''
-        # Initialize a list to store the images
-        images = []
+    answer_parsers = {
+        'recolor': handle_recolor_answer,
+        'creation': handle_creation_answer,
+        'segmentation': handle_segmentation_answer,
+        'inpainting': handle_inpainting_answer
+    }
 
-        # Split the answer into parts by "palette.csv"
-        parts = answer.split("palette.csv")
-        for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
-            # Add the "palette.csv" header back to the part
-            part = "palette.csv" + part
-            print('PARTI')
-            print(part)
-            # Find the start and end indices of the palette in the part
-            palette_start = part.index("```csv") + len("```csv")
-            palette_end = part.index("```", palette_start)
-            # Extract the palette from the part
-            raw_palette = part[palette_start:palette_end]
+    if task_type in answer_parsers.keys():
+        recolor_messages = [
+            {'role': 'system', 'content': loaded_prompts['healer/recolor_system.md']},
+            {'role': 'user', 'name': 'test case', 'content': {"user_input": "[ ... ]", "buggy_answer": loaded_prompts['healer/recolor_test_input.md'], "error": "Key error: 'e'"}},
+            {'role': 'assistant', 'content': loaded_prompts['healer/recolor_test_output.md']},
+        ]
 
-            # Split the raw palette into lines
-            palette_lines = raw_palette.strip().split('\n')
-            # Extract the colors from the palette
-            colors = [line.split(',')[1] for line in palette_lines[1:]]
+        try:
+            _answer, _palette_html, _palette_html_v, _gallery, _gallery_v = answer_parsers[task_type](answer, image_obj)
+            print("qnt, ", len(_gallery))
 
-            # Generate the HTML string of colored full blocks
-            html_palette = f'<h2>Generated palette</h2>' + ''.join(
-                f'<span style="color: {color};">██&#xfe0e;</span>' for color in colors)
+            # recolor task must return at least 1 palette at the first try
+            if task_type == 'recolor' and len(_gallery) == 0:
+                print("Recolor warning: no palette found! Trying to heal answer.")
 
-            # Create a dictionary mapping keys to colors
-            palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
-            image_data = image_obj['image_data'].split('\n')
+                try:
+                    recall_recolor_completion = completion_with_backoff(
+                        model=base_model or openai_base_model,
+                        temperature=temperature,
+                        messages=[
+                            *recolor_messages,
+                            {'role': 'user', 'name': 'current real case',
+                             'content': {"user_input": input_text, "buggy_answer": answer,
+                                         "error": str('Missing palette.csv')}}
+                        ],
+                        max_tokens=5000
+                    )
 
-            # Create an empty numpy array for the image
-            image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
+                    answer = recall_recolor_completion.choices[0].message.content
+                    print(answer)
 
-            # Fill in the image array with the appropriate colors
-            for i, row in enumerate(image_data):
-                for j, pixel in enumerate(row.strip().split(',')):
-                    if pixel:
-                        image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
+                    return answer_parsers[task_type](answer, image_obj)
+                except Exception as e:
+                    raise e
 
-            # Convert the numpy array to a PIL Image
-            image_a = Image.fromarray(image)
-            image_b = image_a.resize((512, 512), Image.NEAREST)
-            # Add the image to the list of images
-            images.append(image_a)
-            images.append(image_b)
+            return _answer, _palette_html, _palette_html_v, _gallery, _gallery_v
+        except Exception as e:
+            print(f"Error encountered.", repr(e))
+            try:
+                if task_type == 'recolor':
+                    recall_recolor_completion = completion_with_backoff(
+                        model=base_model or openai_base_model,
+                        temperature=temperature,
+                        messages=[
+                            *recolor_messages,
+                            {'role': 'user', 'name': 'current real case',
+                             'content': {"user_input": input_text, "buggy_answer": answer.strip(), "error": repr(e)}}
+                        ],
+                        max_tokens=5000
+                    )
 
-        return answer, html_palette, gr.update(visible=True), images, gr.update(visible=True)
+                    answer = recall_recolor_completion.choices[0].message.content
+                    print(answer)
 
-    # If the task type is 'creation', extract the palette and image data from the answer
-    elif task_type == 'creation':
-        # Initialize a list to store the images
-        images = []
-
-        # Split the answer into parts by "palette.csv"
-        parts = answer.split("palette.csv")
-        for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
-            # Add the "palette.csv" header back to the part
-            part = "palette.csv" + part
-
-            # Find the start and end indices of the palette in the part
-            palette_start = part.index("```csv") + len("```csv")
-            palette_end = part.index("```", palette_start)
-            # Extract the palette from the part
-            raw_palette = part[palette_start:palette_end]
-
-            # Split the raw palette into lines
-            palette_lines = raw_palette.strip().split('\n')
-            # Create a dictionary mapping keys to colors
-            palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
-
-            # Find the start and end indices of the image data in the part
-            image_data_start = part.index("image_data.csv\n```csv\n") + len("image_data.csv\n```csv\n")
-            image_data_end = part.index("```\n", image_data_start)
-            # Extract the image data from the part
-            raw_image_data = part[image_data_start:image_data_end]
-
-            # Split the raw image data into lines
-            image_data = raw_image_data.strip().split('\n')
-
-            # Create an empty numpy array for the image
-            image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
-
-            # Fill in the image array with the appropriate colors
-            for i, row in enumerate(image_data):
-                for j, pixel in enumerate(row.strip().split(',')):
-                    if pixel:
-                        image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
-
-            # Convert the numpy array to a PIL Image
-            image_a = Image.fromarray(image)
-            image_b = image_a.resize((512, 512), Image.NEAREST)
-            # Add the image to the list of images
-            images.append(image_a)
-            images.append(image_b)
-
-        return answer, '', None, images, gr.update(visible=True)
-
-    # If the task type is 'segmentation', extract the palette and image data from the answer
-    elif task_type == 'segmentation':
-        # Initialize a list to store the images
-        images = []
-
-        # Split the answer into parts by "palette.csv"
-        parts = answer.split("palette.csv")
-        for part in parts[1:]:  # Skip the first part, as it doesn't contain a palette
-            # Add the "palette.csv" header back to the part
-            part = "palette.csv" + part
-
-            # Check if "```csv" is in the part
-            if "```csv" in part:
-                # Find the start and end indices of the palette in the part
-                palette_start = part.index("```csv") + len("```csv")
-                palette_end = part.index("```\n", palette_start)
-                # Extract the palette from the part
-                raw_palette = part[palette_start:palette_end]
-
-                # Split the raw palette into lines
-                palette_lines = raw_palette.strip().split('\n')
-                # Create a dictionary mapping keys to colors
-                palette = {key: color for key, color in (line.split(',') for line in palette_lines[1:])}
-
-                # Find the start and end indices of the image data in the part
-                image_data_start = part.index("image_data.csv\n```csv\n") + len("image_data.csv\n```csv\n")
-                image_data_end = part.index("```", image_data_start)
-                # Extract the image data from the part
-                raw_image_data = part[image_data_start:image_data_end]
-
-                # Split the raw image data into lines
-                image_data = raw_image_data.strip().split('\n')
-
-                # Create an empty numpy array for the image
-                image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
-
-                # Fill in the image array with the appropriate colors
-                for i, row in enumerate(image_data):
-                    for j, pixel in enumerate(row.strip().split(',')):
-                        if pixel:
-                            image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
-
-                # Convert the numpy array to a PIL Image
-                image_a = Image.fromarray(image)
-                image_b = image_a.resize((512, 512), Image.NEAREST)
-                # Add the image to the list of images
-                images.append(image_a)
-                images.append(image_b)
-            else:
-                continue  # Skip to the next part
-
-        return answer, '', None, images, gr.update(visible=True)
-
-    # If the task type is 'inpainting', extract the image data from the answer
-    elif task_type == 'inpainting':
-        # Initialize a list to store the images
-        images = []
-
-        # Extract the palette from the user's input
-        raw_palette = image_obj['palette'].split('\n')
-        palette = {key: color for key, color in (line.split(',') for line in raw_palette[1:])}  # Skip the header
-
-        # Split the answer into parts by "image_data.csv"
-        parts = answer.split("image_data.csv")
-        print(parts)
-        for part in parts[1:]:  # Skip the first part, as it doesn't contain image data
-            # Add the "image_data.csv" header back to the part
-            part = "image_data.csv" + part
-
-            # Find the start and end indices of the image data in the part
-            image_data_start = part.index("```csv") + len("```csv")
-            image_data_end = part.index("```", image_data_start)
-            # Extract the image data from the part
-            raw_image_data = part[image_data_start:image_data_end]
-
-            # Split the raw image data into lines
-            image_data = raw_image_data.strip().split('\n')
-
-            # Create an empty numpy array for the image
-            image = np.zeros((len(image_data), len(image_data[0].split(',')), 3), dtype=np.uint8)
-
-            # Fill in the image array with the appropriate colors
-            for i, row in enumerate(image_data):
-                for j, pixel in enumerate(row.strip().split(',')):
-                    if pixel:
-                        image[i, j] = [int(palette[pixel][k:k + 2], 16) for k in (1, 3, 5)]  # Convert hex to RGB
-
-            # Convert the numpy array to a PIL Image
-            image_a = Image.fromarray(image)
-            image_b = image_a.resize((512, 512), Image.NEAREST)
-            # Add the image to the list of images
-            images.append(image_a)
-            images.append(image_b)
-
-        return answer, '', None, images, gr.update(visible=True)
-
+                    return answer_parsers[task_type](answer, image_obj)
+            except Exception as e:
+                raise e
     return answer, '', None, None, None
 
 

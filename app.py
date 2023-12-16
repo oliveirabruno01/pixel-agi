@@ -39,7 +39,8 @@ def load_prompts(prompts):
             loaded_prompts[prompt] = file.read()
 
 
-prompts = ['healer/recolor_system.md', 'healer/recolor_test_input.md', 'healer/recolor_test_output.md']
+prompts = ['healer/recolor/system.md', 'healer/recolor/test_input.md', 'healer/recolor/test_output.md',
+           'healer/creation/system.md', 'healer/creation/test_input.md', 'healer/creation/test_output.md']
 load_prompts(prompts)
 
 
@@ -420,6 +421,7 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
     )
 
     answer = cot_completion.choices[0].message.content
+
     print(answer)
 
     answer_parsers = {
@@ -430,50 +432,56 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
     }
 
     if task_type in answer_parsers.keys():
-        recolor_messages = [
-            {'role': 'system', 'content': loaded_prompts['healer/recolor_system.md']},
-            {'role': 'user', 'name': 'test case', 'content': {"user_input": "[ ... ]", "buggy_answer": loaded_prompts['healer/recolor_test_input.md'], "error": "Key error: 'e'"}},
-            {'role': 'assistant', 'content': loaded_prompts['healer/recolor_test_output.md']},
+        specific_messages = [
+            {'role': 'system', 'content': loaded_prompts[f'healer/{task_type}/system.md']},
+            {'role': 'user', 'name': 'test case', 'content': {"user_input": "[ ... ]",
+                                                              "buggy_answer": loaded_prompts[
+                                                                  f'healer/{task_type}/test_input.md'],
+                                                              "error": "Key error: 'e'"}},
+            {'role': 'assistant', 'content': loaded_prompts[f'healer/{task_type}/test_output.md']},
         ]
 
         try:
             _answer, _palette_html, _palette_html_v, _gallery, _gallery_v = answer_parsers[task_type](answer, image_obj)
-            print("qnt, ", len(_gallery))
+            # print("qnt, ", len(_gallery))
 
-            # recolor task must return at least 1 palette at the first try
-            if task_type == 'recolor' and len(_gallery) == 0:
-                print("Recolor warning: no palette found! Trying to heal answer.")
+            # Check specific failures that don't raise exceptions
+            if len(_gallery) == 0:
+                if task_type in ['recolor', 'creation']:
+                    print(f"{task_type} warning! Trying to heal answer.")
 
-                try:
-                    recall_recolor_completion = completion_with_backoff(
-                        model=base_model or openai_base_model,
-                        temperature=temperature,
-                        messages=[
-                            *recolor_messages,
-                            {'role': 'user', 'name': 'current real case',
-                             'content': {"user_input": input_text, "buggy_answer": answer,
-                                         "error": str('Missing palette.csv')}}
-                        ],
-                        max_tokens=5000
-                    )
+                    try:
+                        recall_recolor_completion = completion_with_backoff(
+                            model=base_model or openai_base_model,
+                            temperature=temperature,
+                            messages=[
+                                *specific_messages ,
+                                {'role': 'user', 'name': 'current real case',
+                                 'content': {"user_input": input_text, "buggy_answer": answer,
+                                             "error": str('Missing palette.csv and/or iamge_data if applicable')}}
+                            ],
+                            max_tokens=5000
+                        )
 
-                    answer = recall_recolor_completion.choices[0].message.content
-                    print(answer)
+                        answer = recall_recolor_completion.choices[0].message.content
+                        print(answer)
 
-                    return answer_parsers[task_type](answer, image_obj)
-                except Exception as e:
-                    raise e
+                        return answer_parsers[task_type](answer, image_obj)
+                    except Exception as e:
+                        raise e
 
             return _answer, _palette_html, _palette_html_v, _gallery, _gallery_v
         except Exception as e:
             print(f"Error encountered.", repr(e))
+
+            # Try to fix exception once
             try:
-                if task_type == 'recolor':
+                if task_type in ['recolor', 'creation']:
                     recall_recolor_completion = completion_with_backoff(
                         model=base_model or openai_base_model,
                         temperature=temperature,
                         messages=[
-                            *recolor_messages,
+                            *specific_messages,
                             {'role': 'user', 'name': 'current real case',
                              'content': {"user_input": input_text, "buggy_answer": answer.strip(), "error": repr(e)}}
                         ],
@@ -484,6 +492,7 @@ def ai_response(input_text, temperature, n_shots, n_shots_size, task_type, strea
                     print(answer)
 
                     return answer_parsers[task_type](answer, image_obj)
+
             except Exception as e:
                 raise e
     return answer, '', None, None, None

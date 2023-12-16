@@ -2,9 +2,9 @@
 
 # Pixel-AGI ✍🏼
 
-Pixel-AGI is a project aimed at leveraging the capabilities of large language models (LLMs) for a variety of pixel-art/image reasoning related tasks. The goal is to augment and eventually fine-tune an already heavily trained LLM (like GPT-3.5/4, LlaMA, OpenHermes...) on a dataset of pixel-art and leverage its reasoning capabilities for tasks such as generation, in-painting, editing, coloring, upscaling, downscaling, segmentation, animation and more, in a seamlessly manner.
+Pixel-AGI is a project aimed at leveraging the capabilities of large language models (LLMs) for a variety of pixel-art/image reasoning related tasks. The goal is to augment and eventually fine-tune an already heavily trained LLM (like GPT-3.5/4, LlaMA, OpenHermes...) on a dataset of pixel-art and leverage its reasoning capabilities for tasks such as generation, in-painting, editing, coloring, upscaling, downscaling, segmentation, animation and more, in a seamless manner.
 
-This project is driven by a fascination with language engines and the potential they hold. The idea of planning and reasoning solely using language is a compelling one, and this project aims to explore this concept to its fullest extent on the image space. I'd rather edit each dataset entry manually to add actual reasoning and let the model clone my thoughts than just let the model hallucinate a beautiful answer. 
+This project is driven by a fascination with language engines and the potential they hold. The idea of planning and reasoning solely using language is a compelling one, and this project aims to explore this concept to its fullest extent on the image space.
 
 ## Demo. What it does
 
@@ -33,7 +33,7 @@ Once the application is open, navigate to the settings tab to add your OpenAI AP
 
 The project consists of two main parts: the Gradio app, which is used to interact with the Pixel-AGI models, and the training/dataset building pipelines, which are used to improve and expand the capabilities of the models.
 
-Currently, the `skills/train.jsonl` file contains 111 entries (20 recolor, 25 captioning, 11 creation, 5 segmentation, and 50 inpainting). The goal is to expand this to at least 1000 high-quality entries by early January.
+Currently, the `skills/train.jsonl` file contains 111 entries (20 recolor, 25 captioning, 11 creation, 5 segmentation, and 50 inpainting). The goal is to expand this to at least 1000 high-quality entries by early January. (note: this file is currently not ready for a training job because it has an addition field "type")
 
 You can find the code to prepare the dataset and to generate the inpainting tasks in the same folder. Another utils that I used so far I will upload here after a clean-up.
 
@@ -48,7 +48,7 @@ The app is currently in development. The major tasks that need to be completed a
 3. Add access to the GPT-4 Vision/LlaVA model to leverage its computer vision capabilities?
 
 
-Once these tasks are completed, the focus will shift to building a massive dataset  ̶t̶h̶a̶t̶ ̶b̶u̶i̶l̶d̶s̶ ̶i̶t̶s̶e̶l̶f̶  and conducting several training runs.
+Once these tasks are completed, the focus will shift to building a massive dataset  ̶t̶h̶a̶t̶ ̶b̶u̶i̶l̶d̶s̶ ̶i̶t̶s̶e̶l̶f̶  and conducting several training runs. The following image formats are not definitve, and I'm still trying to figure out the best balance between lenght and perfomance. Each task requires some special treatments, but eventually I will group all tasks in "general".
 
 ## Future Work
 
